@@ -50,29 +50,53 @@
         list.innerHTML = '<div class="chalk-dashed p-10 text-center chalk-dim text-sm mt-6">📭 No assignments yet<br><span class="text-xs mt-2 block">Tap + Add to start</span></div>';
         return;
       }
-      data.sort((a, b) => {
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        return new Date(a.dueDate) - new Date(b.dueDate);
-      });
+      const ongoing = data.filter(a => !a.completed).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      const done = data.filter(a => a.completed);
       const rots = ['rotate-1', '-rotate-1', 'rotate-0.5', '-rotate-0.5'];
-      data.forEach((a, i) => {
+
+      ongoing.forEach((a, i) => {
         const r = rots[i % 4];
         list.innerHTML += `
           <div class="wobbly-box p-5 mb-4 flex justify-between items-start gap-3 transition-all hover:bg-white/5 ${r}" style="animation: fadeUp .5s cubic-bezier(0.16, 1, 0.3, 1) ${i*0.06}s both">
             <div class="flex-1 min-w-0">
-              <div class="text-lg leading-tight ${a.completed ? 'line-through text-zinc-500' : 'chalk-text font-bold'}">${a.title}</div>
+              <div class="text-lg leading-tight chalk-text font-bold">${a.title}</div>
               <div class="text-sm chalk-dim mt-1">${a.subjectName}</div>
-              <div class="text-[10px] font-bold uppercase tracking-widest mt-3 ${a.completed ? 'chalk-dim' : 'text-amber-200/80'}">⏳ Due: ${a.dueDate}</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest mt-3 text-amber-200/80">⏳ Due: ${a.dueDate}</div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              ${!a.completed
-                ? `<button class="wobbly-box px-3 py-1 text-[11px] font-bold text-emerald-300 border-emerald-400/50 bg-emerald-400/10 hover:bg-emerald-400/20 active:scale-95 transition-all" onclick="complete('${a.id}')">✓ Done</button>`
-                : `<span class="border border-emerald-400/30 text-emerald-400 bg-emerald-400/5 px-3 py-1 rounded text-[11px] font-bold">✓ Done</span>`}
+              <button class="wobbly-box px-3 py-1 text-[11px] font-bold text-emerald-300 border-emerald-400/50 bg-emerald-400/10 hover:bg-emerald-400/20 active:scale-95 transition-all" onclick="complete('${a.id}')">✓ Done</button>
               <button class="w-8 h-8 flex items-center justify-center border border-white/20 rounded text-sm hover:bg-white/10 transition-colors" onclick="window.location.href='edit-assignment.html?id=${a.id}'">✏️</button>
               <button class="w-8 h-8 flex items-center justify-center border border-red-400/30 text-red-400 text-sm rounded hover:bg-red-400/10 transition-colors" onclick="del('${a.id}')">🗑</button>
             </div>
           </div>`;
       });
+
+      if (done.length) {
+        list.innerHTML += `
+          <div class="chalk-dashed px-4 py-3 mt-2 mb-3 flex items-center justify-between cursor-pointer select-none" onclick="toggleDone()">
+            <span class="text-xs font-bold uppercase tracking-widest chalk-dim">✓ Completed (${done.length})</span>
+            <span id="doneChevron" class="material-symbols-outlined chalk-dim text-lg transition-transform">expand_more</span>
+          </div>
+          <div id="doneList" class="hidden"></div>`;
+        const doneList = done.map(a => `
+          <div class="wobbly-box px-4 py-2 mb-2 flex justify-between items-center gap-3 opacity-70">
+            <div class="flex-1 min-w-0 flex items-baseline gap-2">
+              <span class="text-sm leading-tight line-through text-zinc-500 truncate">${a.title}</span>
+              <span class="text-xs chalk-dim truncate">${a.subjectName}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button class="w-7 h-7 flex items-center justify-center border border-red-400/30 text-red-400 text-xs rounded hover:bg-red-400/10 transition-colors" onclick="del('${a.id}')">🗑</button>
+            </div>
+          </div>`).join("");
+        document.getElementById("doneList").innerHTML = doneList;
+      }
+    }
+
+    function toggleDone() {
+      const doneList = document.getElementById("doneList");
+      const chevron = document.getElementById("doneChevron");
+      doneList.classList.toggle("hidden");
+      chevron.textContent = doneList.classList.contains("hidden") ? "expand_more" : "expand_less";
     }
 
     async function complete(id) { await fetch(`https://student-planner-iwxm.onrender.com/assignments/${id}/complete`, { method: "PUT" }); load(); }
